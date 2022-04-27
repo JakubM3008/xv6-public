@@ -90,22 +90,29 @@ sys_uptime(void)
   return xticks;
 }
 
+// mprotect system call implementation
+//'protects' a page where it's made to be readable only
 int
 sys_mprotect(void){
-  int d;
-  int n = 0;
-  if(argint(0, &d)<0 || argint(1, &n)<0)
+  int addr;
+  int len;
+  if(argint(0, &addr) < 0)
     return -1;
-  return mprotect((void *)d,n);
+  if(argint(1, &len) < 0)
+    return -1;
+  return mprotect((void *)addr, len);
 
 }
 
+
+//munprotect system call implementation
+//sets a page as writeable as well as readable
 int
 sys_munprotect(void){
-  int d;
-  int n = 0;
-  if(argint(0, &d)<0 || argint(1, &n)<0)
+  int addr;
+  int len = 0;
+  if(argint(0, &addr)<0 || argint(1, &len)<0)
     return -1;
-  return munprotect((void *)d,n);
+  return munprotect((void *)addr,len);
 
 }

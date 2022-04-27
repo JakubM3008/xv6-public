@@ -392,6 +392,72 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
   return 0;
 }
 
+//The mprotect call will make page table entries READ-ONLY and not writeable by altering this permission.
+int
+mprotect(void *addr, int len){
+  
+  struct proc *curproc = myproc(); //get the current process
+  
+  if(len <= 0 || (int)addr+len*PGSIZE>curproc->vlimit){ //check if the length is valid
+    cprintf("\nwrong len\n");
+    return -1;
+  }
+  if((int)(((int) addr) % PGSIZE )  != 0){ //check if the address is valid
+    cprintf("\nwrong addr %p\n", addr);
+    return -1;
+  }
+
+  
+  pte_t *pageTableEntry; //for each page table entry
+  int i;
+  
+  for (i = (int) addr; i < ((int) addr + (len) *PGSIZE); i+= PGSIZE){
+    pageTableEntry = walkpgdir(curproc->pgdir,(void*) i, 0); 
+    if(pageTableEntry && ((*pageTableEntry & PTE_U) != 0) && ((*pageTableEntry & PTE_P) != 0)  ){
+      *pageTableEntry = (*pageTableEntry) & (~PTE_W) ;//set the permission to read only
+      cprintf("\nPTE : 0x%p\n", pageTableEntry);//print the page table entry
+    } else {
+      return -1;
+    }
+  }
+
+  lcr3(V2P(curproc->pgdir));
+
+  return 0;
+}
+
+//The munprotect call will make page table entries READABLE and WRITEABLE by altering this permission.
+int
+munprotect(void *addr, int len){
+  struct proc *curproc = myproc(); //get the current process
+  
+    if(len <= 0 || (int)addr+len*PGSIZE>curproc->vlimit){//check if the length is valid
+    cprintf("\nwrong len\n");
+    return -1;
+  }
+
+  if((int)(((int) addr) % PGSIZE )  != 0){//check if the address is valid
+    cprintf("\nwrong addr %p\n", addr);
+    return -1;
+  }
+
+  pte_t *pageTableEntry; //for each page table entry
+  int i;
+  for (i = (int) addr; i < ((int) addr + (len) *PGSIZE); i+= PGSIZE){
+    pageTableEntry = walkpgdir(curproc->pgdir,(void*) i, 0);
+    if(pageTableEntry && ((*pageTableEntry & PTE_U) != 0) && ((*pageTableEntry & PTE_P) != 0) ){
+      *pageTableEntry = (*pageTableEntry) | (PTE_W) ; //set the permission to read and write
+      cprintf("\nPTE : 0x%p\n", pageTableEntry); //print the page table entry
+    } else {
+      return -1;
+    }
+  }
+
+  lcr3(V2P(curproc->pgdir)); //set the page table register to the current page table
+  
+  return 0;
+}
+
 //PAGEBREAK!
 // Blank page.
 //PAGEBREAK!
